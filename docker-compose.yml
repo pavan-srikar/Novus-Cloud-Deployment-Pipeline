@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: pavan
+      POSTGRES_PASSWORD: pavan123
+      POSTGRES_DB: sin_of_solace
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .app//backend
+
+    restart: unless-stopped
+
+    depends_on:
+      - postgres
+
+    ports:
+      - "5000:5000"
+
+    environment:
+      DATABASE_URL: postgresql://pavan:pavan123@postgres:5432/sin_of_solace?schema=public
+      PORT: 5000
+      JWT_SECRET: urmomgay
+
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+
+  frontend:
+    build:
+      context: ./app/frontend
+
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "5173:5173"
+
+  
+volumes:
+  postgres_data:
