@@ -2,9 +2,9 @@ import 'dotenv/config'
 import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 
-import authRoutes from './middleware/auth'
-import chatRoutes from './routes/chat'
-import taskRoutes from './routes/tasks'
+import authRoutes from './middleware/auth.js'
+import chatRoutes from './routes/chat.js'
+import taskRoutes from './routes/tasks.js'
 
 const app = express()
 

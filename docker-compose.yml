@@ -17,7 +17,7 @@ services:
 
   backend:
     build:
-      context: .app//backend
+      context: ./app/backend
 
     restart: unless-stopped
 
@@ -47,7 +47,7 @@ services:
       - backend
 
     ports:
-      - "5173:5173"
+      - "80:80"
 
   
 volumes:
