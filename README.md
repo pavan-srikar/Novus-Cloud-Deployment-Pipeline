@@ -19,6 +19,8 @@ Novus is a full-stack AI productivity platform built to simulate a real-world pr
 * Infrastructure as Code
 * CI/CD automation
 * Monitoring & Logging
+* Production-ready NGINX reverse proxy
+* Multi-container architecture with Docker Compose
 
 ---
 
@@ -33,17 +35,42 @@ Novus is a full-stack AI productivity platform built to simulate a real-world pr
         Docker Image Build & Push
                    │
                    ▼
-         Kubernetes Cluster (AWS)
+              AWS / Kubernetes
                    │
-    ┌──────────────┴──────────────┐
-    │                             │
-Frontend (React)           Backend (Express)
-                                    │
-                                    ▼
-                             PostgreSQL
-                                    │
-                     Prometheus • Grafana • Loki
+                   ▼
+               NGINX (Reverse Proxy)
+            ┌──────────┴──────────┐
+            │                     │
+      React Frontend        Express Backend
+                                     │
+                                     ▼
+                               PostgreSQL
+                                     │
+                      Prometheus • Grafana • Loki
 ```
+
+# 🔀 Request Flow
+
+All client traffic enters through NGINX, which acts as a reverse proxy.
+
+
+Browser
+│
+▼
+NGINX (Port 80)
+├── / → React Static Files
+└── /api/* → Express Backend
+│
+▼
+PostgreSQL
+
+
+Benefits:
+
+- Single public entry point
+- Backend remains hidden from clients
+- Simplified routing and deployment
+- Ready for HTTPS, load balancing, and Kubernetes Ingress
 
 ---
 
@@ -153,11 +180,11 @@ curl http://localhost:5000/health
 Open the application
 
 ```
-Frontend
-http://localhost:5173
+Application
+http://localhost
 
-Backend API
-http://localhost:5000
+Backend Health
+http://localhost:5000/health
 ```
 
 Stop the project
@@ -186,11 +213,12 @@ DEEPSEEK_API_KEY=
 
 # 🐳 Docker Services
 
-| Service    | Port |
-| ---------- | ---: |
-| Frontend   | 5173 |
-| Backend    | 5000 |
-| PostgreSQL | 5432 |
+| Service          | Internal Port | Host Port |
+| ---------------- | ------------: | --------: |
+| NGINX (Frontend) |            80 |        80 |
+| Backend API      |          5000 |      5000 |
+| PostgreSQL       |          5432 |      5432 |
+
 
 ---
 
@@ -238,24 +266,26 @@ The platform includes production-ready monitoring.
 
 # 📌 Roadmap
 
-* [x] Dockerized frontend
-* [x] Dockerized backend
-* [x] PostgreSQL container
-* [x] Docker Compose orchestration
-* [ ] Terraform infrastructure
-* [ ] AWS deployment
-* [ ] GitHub Actions CI/CD
-* [ ] Kubernetes deployment
-* [ ] ArgoCD GitOps
-* [ ] NGINX Ingress
-* [ ] cert-manager
-* [ ] ExternalDNS
-* [ ] Horizontal Pod Autoscaler
-* [ ] Prometheus
-* [ ] Grafana
-* [ ] Loki
-* [ ] Production monitoring
-* [ ] Automated SSL certificates
+- [x] Dockerized frontend
+- [x] Dockerized backend
+- [x] PostgreSQL container
+- [x] Docker Compose orchestration
+- [x] Production NGINX frontend
+- [x] Reverse proxy routing
+- [ ] Container health checks
+- [ ] Multi-stage Docker optimization
+- [ ] GitHub Actions CI/CD
+- [ ] Terraform infrastructure
+- [ ] AWS deployment
+- [ ] Kubernetes deployment
+- [ ] ArgoCD GitOps
+- [ ] NGINX Ingress
+- [ ] cert-manager
+- [ ] ExternalDNS
+- [ ] Horizontal Pod Autoscaler
+- [ ] Prometheus
+- [ ] Grafana
+- [ ] Loki
 
 ---
 
