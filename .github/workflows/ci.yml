@@ -8,20 +8,26 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-verify:
     runs-on: ubuntu-latest
 
     steps:
+      # ---------------- Checkout ----------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # ---------------- Node ----------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # ---------- Backend ----------
+      # ---------------- Backend ----------------
       - name: Install Backend Dependencies
         working-directory: app/backend
         run: npm ci
@@ -30,18 +36,11 @@ jobs:
         working-directory: app/backend
         run: npx prisma generate
 
-      - name: Debug Prisma
-        working-directory: app/backend
-        run: |
-          ls -la node_modules/@prisma
-          ls -la node_modules/.prisma || true
-          npx prisma -v
-
       - name: Build Backend
         working-directory: app/backend
         run: npm run build
 
-      # ---------- Frontend ----------
+      # ---------------- Frontend ----------------
       - name: Install Frontend Dependencies
         working-directory: app/frontend
         run: npm ci
@@ -50,9 +49,31 @@ jobs:
         working-directory: app/frontend
         run: npm run build
 
-      # ---------- Docker ----------
-      - name: Build Backend Docker Image
-        run: docker build -t novus-backend ./app/backend
+      # ---------------- Docker ----------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build Frontend Docker Image
-        run: docker build -t novus-frontend ./app/frontend
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---------------- Backend Image ----------------
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/novus-backend:latest
+
+      # ---------------- Frontend Image ----------------
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/novus-frontend:latest
