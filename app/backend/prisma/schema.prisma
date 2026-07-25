@@ -1,11 +1,10 @@
-// backend/prisma/schema.prisma
-
 generator client {
-  provider = "prisma-client-js"        // Note: was "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -25,24 +24,24 @@ model User {
 model Task {
   id        String   @id @default(uuid())
   title     String
-  type      String   @default("DAILY") // DAILY, WEEKLY, EPIC
-  category  String   @default("General") // Coding, Fitness, YouTube, etc.
-  status    String   @default("PENDING") // PENDING, COMPLETED
+  type      String   @default("DAILY")
+  category  String   @default("General")
+  status    String   @default("PENDING")
   dueDate   DateTime?
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 
-  parentId  String?
-  parent    Task?    @relation("SubTasks", fields: [parentId], references: [id])
-  subTasks  Task[]   @relation("SubTasks")
+  parentId String?
+  parent   Task?  @relation("SubTasks", fields: [parentId], references: [id])
+  subTasks Task[] @relation("SubTasks")
 }
 
 model Memory {
   id        String   @id @default(uuid())
   userId    String
-  content   String   // e.g., "User struggles with morning focus"
-  category  String?  // e.g., "Habit", "Goal", "Preference"
+  content   String
+  category  String?
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
@@ -58,7 +57,7 @@ model Chat {
 model Message {
   id        String   @id @default(uuid())
   chatId    String
-  role      String   // "user" or "assistant"
+  role      String
   content   String
   chat      Chat     @relation(fields: [chatId], references: [id])
   createdAt DateTime @default(now())
@@ -67,8 +66,8 @@ model Message {
 model XPLog {
   id        String   @id @default(uuid())
   userId    String
-  amount    Int      // Positive for gain, negative for penalty
-  reason    String   // e.g., "Completed Daily Run"
+  amount    Int
+  reason    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
