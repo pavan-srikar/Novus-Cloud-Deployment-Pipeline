@@ -1,19 +1,28 @@
 services:
   postgres:
     image: postgres:17
-
     restart: unless-stopped
 
     environment:
-      POSTGRES_USER: pavan
-      POSTGRES_PASSWORD: pavan123
-      POSTGRES_DB: sin_of_solace
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
 
     ports:
       - "5432:5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - novus-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -22,20 +31,30 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
     ports:
       - "5000:5000"
 
     environment:
-      DATABASE_URL: postgresql://pavan:pavan123@postgres:5432/sin_of_solace?schema=public
-      PORT: 5000
-      JWT_SECRET: urmomgay
-
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${PORT}
+      JWT_SECRET: ${JWT_SECRET}
       GROQ_API_KEY: ${GROQ_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+
+    networks:
+      - novus-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
@@ -44,11 +63,25 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
     ports:
       - "80:80"
 
-  
+    networks:
+      - novus-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  novus-network:
+    driver: bridge
+
 volumes:
   postgres_data:

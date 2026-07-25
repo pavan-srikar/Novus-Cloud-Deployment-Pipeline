@@ -21,7 +21,11 @@ Novus is a full-stack AI productivity platform built to simulate a real-world pr
 * Monitoring & Logging
 * Production-ready NGINX reverse proxy
 * Multi-container architecture with Docker Compose
-
+* NGINX reverse proxy
+* Multi-stage production Docker builds
+* Container health checks
+* Persistent Docker volumes
+* Custom Docker networking
 ---
 
 # 🏗️ Architecture
@@ -53,7 +57,7 @@ Novus is a full-stack AI productivity platform built to simulate a real-world pr
 
 All client traffic enters through NGINX, which acts as a reverse proxy.
 
-
+```
 Browser
 │
 ▼
@@ -63,7 +67,7 @@ NGINX (Port 80)
 │
 ▼
 PostgreSQL
-
+```
 
 Benefits:
 
@@ -222,6 +226,22 @@ DEEPSEEK_API_KEY=
 
 ---
 
+# 🐳 Production Docker Features
+
+The application is configured with production-ready Docker practices:
+
+- Multi-stage Docker builds
+- NGINX serving the React production build
+- Reverse proxy for API requests
+- Persistent PostgreSQL storage using named Docker volumes
+- Custom Docker bridge network for service discovery
+- Container health checks
+- Automatic container restart policies
+- Environment variable based configuration
+
+---
+
+
 # 📈 CI/CD Pipeline
 
 * Source Control with GitHub
@@ -270,10 +290,13 @@ The platform includes production-ready monitoring.
 - [x] Dockerized backend
 - [x] PostgreSQL container
 - [x] Docker Compose orchestration
-- [x] Production NGINX frontend
-- [x] Reverse proxy routing
-- [ ] Container health checks
-- [ ] Multi-stage Docker optimization
+- [x] Multi-stage production Docker builds
+- [x] NGINX reverse proxy
+- [x] Health checks
+- [x] Persistent Docker volumes
+- [x] Custom Docker networking
+- [x] Restart policies
+- [x] Environment variable management
 - [ ] GitHub Actions CI/CD
 - [ ] Terraform infrastructure
 - [ ] AWS deployment
