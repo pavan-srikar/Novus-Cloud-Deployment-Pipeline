@@ -1,0 +1,47 @@
+name: Novus CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ---------- Backend ----------
+      - name: Install Backend Dependencies
+        working-directory: app/backend
+        run: npm ci
+
+      - name: Build Backend
+        working-directory: app/backend
+        run: npm run build
+
+      # ---------- Frontend ----------
+      - name: Install Frontend Dependencies
+        working-directory: app/frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: app/frontend
+        run: npm run build
+
+      # ---------- Docker ----------
+      - name: Build Backend Docker Image
+        run: docker build -t novus-backend ./app/backend
+
+      - name: Build Frontend Docker Image
+        run: docker build -t novus-frontend ./app/frontend
