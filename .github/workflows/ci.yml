@@ -77,3 +77,28 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/novus-frontend:latest
+
+  deploy:
+    needs: build-and-verify
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            cd ~/novus
+
+            docker compose -f docker-compose.prod.yml pull
+
+            docker compose -f docker-compose.prod.yml up -d
+
+            docker image prune -f
