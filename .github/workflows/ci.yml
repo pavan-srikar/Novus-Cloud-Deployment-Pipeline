@@ -78,7 +78,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/novus-frontend:latest
 
-  deploy:
+  deploy: #used to deploy using docker compose on the ec2 instance but now i am using kubernetes pods
+
+    if: false
+
     needs: build-and-verify
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: novus-config
+  namespace: novus
+
+data:
+  PORT: "5000"

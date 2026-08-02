@@ -1,20 +1,29 @@
 #!/bin/bash
-set -eux
+set -e
 
 apt-get update
 
 apt-get install -y \
-    docker.io \
-    docker-compose-v2 \
+    curl \
     git \
-    curl
+    ca-certificates
+
+# Install Docker
+curl -fsSL https://get.docker.com | sh
 
 systemctl enable docker
 systemctl start docker
 
 usermod -aG docker ubuntu
 
-# Wait until Docker is responding
-until docker info >/dev/null 2>&1; do
-    sleep 2
-done
+# Install k3s
+curl -sfL https://get.k3s.io | sh -
+
+# Make kubectl available for ubuntu
+mkdir -p /home/ubuntu/.kube
+
+cp /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
+
+chown -R ubuntu:ubuntu /home/ubuntu/.kube
+
+echo 'alias kubectl="sudo k3s kubectl"' >> /home/ubuntu/.bashrc

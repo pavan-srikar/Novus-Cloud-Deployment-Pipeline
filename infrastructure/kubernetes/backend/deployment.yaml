@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend
+  namespace: novus
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+
+      containers:
+
+      - name: backend
+
+        image: ghcr.io/pavan-srikar/novus-backend:latest
+
+        imagePullPolicy: Always
+
+        ports:
+
+        - containerPort: 5000
+
+        envFrom:
+
+        - secretRef:
+            name: novus-secret
+
+        - configMapRef:
+            name: novus-config
