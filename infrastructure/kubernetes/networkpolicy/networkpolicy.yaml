@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: novus-network-policy
+  namespace: novus
+
+spec:
+  podSelector: {}
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+
+    # Frontend
+    - to:
+        - podSelector:
+            matchLabels:
+              app: frontend
+
+    # Backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+
+      to:
+        - podSelector:
+            matchLabels:
+              app: backend
+
+    # Postgres
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+
+      to:
+        - podSelector:
+            matchLabels:
+              app: postgres

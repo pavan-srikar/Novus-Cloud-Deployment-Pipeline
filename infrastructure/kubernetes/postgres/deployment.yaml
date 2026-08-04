@@ -6,7 +6,7 @@ metadata:
   namespace: novus
 
 spec:
-  replicas: 1
+  replicas: 2
 
   selector:
     matchLabels:
@@ -27,22 +27,25 @@ spec:
         image: postgres:17
 
         ports:
-
         - containerPort: 5432
 
-        envFrom:
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
 
+        envFrom:
         - secretRef:
             name: novus-secret
 
         volumeMounts:
-
         - mountPath: /var/lib/postgresql/data
           name: postgres-storage
 
       volumes:
-
       - name: postgres-storage
-
         persistentVolumeClaim:
           claimName: postgres-pvc
