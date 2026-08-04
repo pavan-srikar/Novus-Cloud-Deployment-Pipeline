@@ -113,6 +113,12 @@ jobs:
           script: |
             cd ~/Novus-Cloud-Deployment-Pipeline
 
+            git fetch origin
+
+            git reset --hard origin/main
+
             chmod +x infrastructure/kubernetes/update-k8s-secret.sh
 
             ./infrastructure/kubernetes/update-k8s-secret.sh
+
+            sudo k3s kubectl apply -f infrastructure/kubernetes/

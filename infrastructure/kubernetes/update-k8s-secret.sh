@@ -22,10 +22,12 @@ $KUBECTL create secret generic novus-secret \
   --from-literal=OPENROUTER_API_KEY="$OPENROUTER_API_KEY" \
   --from-literal=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
 
-echo "Restarting backend..."
+echo "Restarting frontend backend..."
 
-$KUBECTL rollout restart deployment/backend -n novus
+kubectl rollout restart deployment/backend -n novus
+kubectl rollout restart deployment/frontend -n novus
 
-$KUBECTL rollout status deployment/backend -n novus
+kubectl rollout status deployment/backend -n novus
+kubectl rollout status deployment/frontend -n novus
 
 echo "✅ Kubernetes Secret updated successfully."
