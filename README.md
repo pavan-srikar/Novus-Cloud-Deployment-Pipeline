@@ -43,41 +43,29 @@
 
 ## Architecture
 
-  
-
-``` text
-
-GitHub
-
-│
-
-GitHub Actions (CI)
-
-│
-
-Build & Push Docker Images (GHCR)
-
-│
-
-Production Server
-
-│
-
-NGINX
-
-├── React Frontend
-
-└── Express Backend
-
-│
-
-PostgreSQL
-
+```text
+                    GitHub
+                       │
+              GitHub Actions (CI)
+                       │
+       Build & Push Images to GHCR
+                       │
+               SSH Deployment Job
+                       │
+                AWS EC2 (Terraform)
+                       │
+                k3s Kubernetes
+                       │
+            NGINX Ingress Controller
+              │                 │
+         React Frontend    Express Backend
+              │                 │
+              └──── PostgreSQL ─┘
 ```
 
   
 
-------------------------------------------------------------------------
+--------
 
   
 
@@ -99,17 +87,20 @@ PostgreSQL
 - PostgreSQL
 
 ### DevOps
+
 - Docker
 - Docker Compose
 - GitHub Actions
 - GitHub Container Registry (GHCR)
-- NGINX
-
-### Planned
 - Terraform
-- AWS
-- Kubernetes
-- ArgoCD
+- AWS EC2
+- AWS S3 Remote State
+- Kubernetes (k3s)
+- NGINX Ingress
+
+### In Progress
+
+- Argo CD
 - Prometheus
 - Grafana
 - Loki
@@ -118,29 +109,26 @@ PostgreSQL
 
 ## Project Structure
 
-  
-
-``` text
-
+```text
 .
-
 ├── app/
-
-│ ├── backend/
-
-│ └── frontend/
-
+│   ├── backend/
+│   └── frontend/
+│
+├── infrastructure/
+│   ├── terraform/
+│   └── kubernetes/
+│
 ├── docker-compose.dev.yml
-
 ├── docker-compose.prod.yml
-
+│
 ├── .github/
-
+│   └── workflows/
+│
 └── README.md
-
 ```
 
-------------------------------------------------------------------------
+-------
 
 ## Quick Start
 
@@ -179,31 +167,30 @@ Application:
 - Frontend: http://localhost
 - Backend Health: http://localhost:5000/health
 
-------------------------------------------------------------------------
-## Environment Variables
+-------
+## Deployment
 
-Backend:
+Infrastructure is provisioned using Terraform.
 
-``` env
+Terraform provisions:
 
-DATABASE_URL=
+- EC2 Instance
+- Elastic IP
+- Security Group
+- User Data bootstrap
+- Remote S3 Terraform state
 
-JWT_SECRET=
+GitHub Actions:
 
+- Builds frontend
+- Builds backend
+- Pushes images to GHCR
+- Updates Kubernetes Secrets
+- Restarts backend deployment
+
+The application runs on a single-node k3s Kubernetes cluster.
   
 
-GROQ_API_KEY=
-
-GEMINI_API_KEY=
-
-OPENROUTER_API_KEY=
-
-DEEPSEEK_API_KEY=
-
-```
-
-  
-------------------------------------------------------------------------
 
 ## Docker
 
@@ -224,73 +211,81 @@ docker compose -f docker-compose.prod.yml up -d
 
 Production images are pulled from GitHub Container Registry (GHCR).
 
-------------------------------------------------------------------------
+
+## Kubernetes
+
+Application components:
+
+- Namespace
+- ConfigMap
+- Secret
+- PostgreSQL Deployment
+- Backend Deployment
+- Frontend Deployment
+- Persistent Volume Claim
+- Services
+- NGINX Ingress
+
+Secrets are automatically updated from GitHub Actions during deployment.
 
 ## CI Pipeline
 
-On every push to `main`:
+On every push to `main`
 
 1. Install dependencies
-
-2. Generate Prisma client
-
+2. Generate Prisma Client
 3. Build backend
-
 4. Build frontend
-
 5. Build Docker images
-
 6. Push images to GHCR
-
-------------------------------------------------------------------------
+7. Connect to EC2
+8. Update Kubernetes Secret
+9. Restart Backend Deployment
 
 ## Roadmap
 
 ### Completed
 
 - [x] Dockerized frontend
-
 - [x] Dockerized backend
-
 - [x] PostgreSQL
-
-- [x] Docker Compose (development)
-
-- [x] Docker Compose (production)
-
+- [x] Docker Compose (Development)
+- [x] Docker Compose (Production)
 - [x] Multi-stage Docker builds
-
 - [x] Health checks
-
 - [x] Named Docker volumes
-
 - [x] Custom Docker network
-
-- [x] Restart policies
-
-- [x] Environment variables
-
 - [x] GitHub Actions CI
-
 - [x] GitHub Container Registry
+- [x] AWS EC2
+- [x] Terraform
+- [x] S3 Remote State
+- [x] Kubernetes (k3s)
+- [x] NGINX Ingress
+- [x] Kubernetes Secrets
+- [x] ConfigMaps
+- [x] Persistent Volumes
 
 ### Planned
 
-- [ ] Continuous Deployment to AWS EC2
-
-- [ ] Terraform
-
-- [ ] Kubernetes
-
-- [ ] ArgoCD
-
-- [ ] Prometheus
-
-- [ ] Grafana
-
-- [ ] Loki
-
+- [ ] Argo CD GitOps
+- [ ] Prometheus Monitoring
+- [ ] Grafana Dashboards
+- [ ] Loki Log Aggregation
 ------------------------------------------------------------------------
 ## Purpose
 
-This project demonstrates an end-to-end DevOps workflow, from local development with Docker to automated builds, container image publishing, and cloud deployment using modern infrastructure tooling.
+This project demonstrates a production-style cloud-native deployment workflow using modern DevOps practices.
+
+It covers:
+
+- Infrastructure as Code with Terraform
+- Containerization using Docker
+- CI/CD with GitHub Actions
+- Kubernetes orchestration (k3s)
+- AWS cloud deployment
+- Container image publishing with GHCR
+- Secure secret management
+- Reverse proxying with NGINX Ingress
+
+The remaining roadmap focuses on GitOps and observability using Argo CD, Prometheus, Grafana, and Loki.

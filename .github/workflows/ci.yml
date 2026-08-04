@@ -78,53 +78,42 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/novus-frontend:latest
 
-  deploy: #used to deploy using docker compose on the ec2 instance but now i am using kubernetes pods
+    deploy:
+      needs: build-and-verify
 
-    if: false
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    needs: build-and-verify
+      runs-on: ubuntu-latest
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      steps:
 
-    runs-on: ubuntu-latest
+        - name: Checkout Repository
+          uses: actions/checkout@v4
 
-    steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.2
+        - name: Update Kubernetes Secret
+          uses: appleboy/ssh-action@v1.2.2
 
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          env:
+            POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+            DATABASE_URL: ${{ secrets.DATABASE_URL }}
+            JWT_SECRET: ${{ secrets.JWT_SECRET }}
+            GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+            GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+            OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+            DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-          script: |
-            mkdir -p ~/novus
+          with:
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USER }}
+            key: ${{ secrets.EC2_SSH_KEY }}
 
-            cd ~/novus
+            envs: POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,DATABASE_URL,JWT_SECRET,GEMINI_API_KEY,GROQ_API_KEY,OPENROUTER_API_KEY,DEEPSEEK_API_KEY
 
-            curl -fsSL \
-            https://raw.githubusercontent.com/pavan-srikar/Novus-Cloud-Deployment-Pipeline/main/docker-compose.prod.yml \
-            -o docker-compose.prod.yml
+            script: |
+              cd ~/Novus-Cloud-Deployment-Pipeline
 
-            cat > .env <<EOF
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+              chmod +x infrastructure/kubernetes/update-k8s-secret.sh
 
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-
-            PORT=${{ secrets.PORT }}
-
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-
-            GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-            DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
-            EOF
-
-            docker compose -f docker-compose.prod.yml pull
-
-            docker compose -f docker-compose.prod.yml up -d
-
-            docker image prune -f
+              ./infrastructure/kubernetes/update-k8s-secret.sh
