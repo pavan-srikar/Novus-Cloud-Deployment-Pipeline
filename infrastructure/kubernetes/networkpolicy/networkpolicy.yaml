@@ -1,43 +1,55 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
-
 metadata:
-  name: novus-network-policy
+  name: frontend-policy
   namespace: novus
-
 spec:
-  podSelector: {}
-
+  podSelector:
+    matchLabels:
+      app: frontend
   policyTypes:
     - Ingress
-    - Egress
-
   ingress:
+    - {} # allow all inbound (public-facing, or restrict to ingress-controller if you have one)
 
-    # Frontend
-    - to:
-        - podSelector:
-            matchLabels:
-              app: frontend
-
-    # Backend
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: novus
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
     - from:
         - podSelector:
             matchLabels:
               app: frontend
+      ports:
+        - protocol: TCP
+          port: 5000
 
-      to:
-        - podSelector:
-            matchLabels:
-              app: backend
-
-    # Postgres
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-policy
+  namespace: novus
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
     - from:
         - podSelector:
             matchLabels:
               app: backend
-
-      to:
-        - podSelector:
-            matchLabels:
-              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
