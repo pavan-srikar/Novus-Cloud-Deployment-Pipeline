@@ -117,8 +117,8 @@ jobs:
 
             git reset --hard origin/main
 
-            chmod +x infrastructure/kubernetes/update-k8s-secret.sh
+            chmod +x infrastructure/kubernetes/config/update-k8s-secret.sh
 
-            ./infrastructure/kubernetes/update-k8s-secret.sh
+            bash infrastructure/kubernetes/config/update-k8s-secret.sh
 
-            sudo k3s kubectl apply -f infrastructure/kubernetes/
+            sudo k3s kubectl apply -k infrastructure/kubernetes
