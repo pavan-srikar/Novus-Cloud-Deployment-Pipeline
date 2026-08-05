@@ -24,10 +24,10 @@ $KUBECTL create secret generic novus-secret \
 
 echo "Restarting frontend backend..."
 
-kubectl rollout restart deployment/backend -n novus
-kubectl rollout restart deployment/frontend -n novus
+$KUBECTL rollout restart deployment/backend -n novus
+$KUBECTL rollout restart deployment/frontend -n novus
 
-kubectl rollout status deployment/backend -n novus
-kubectl rollout status deployment/frontend -n novus
+$KUBECTL rollout status deployment/backend -n novus
+$KUBECTL rollout status deployment/frontend -n novus
 
 echo "✅ Kubernetes Secret updated successfully."
