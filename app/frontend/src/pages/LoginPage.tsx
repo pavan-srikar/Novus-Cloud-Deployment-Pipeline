@@ -28,7 +28,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
         <h1 className="text-3xl font-black text-blue-500 mb-6 italic text-center uppercase tracking-widest">
-          {isLogin ? 'Resume Quest' : 'New Hero Registry'}
+          {isLogin ? 'Resume Quest' : 'New Nigga Registry'}
         </h1>
         
         <form onSubmit={handleAuth} className="space-y-4">
@@ -61,7 +61,7 @@ export default function LoginPage() {
           onClick={() => setIsLogin(!isLogin)}
           className="w-full mt-6 text-slate-500 text-xs font-bold hover:text-blue-400 transition-colors"
         >
-          {isLogin ? "DON'T HAVE AN IDENTITY? REGISTER" : "ALREADY A HERO? LOGIN"}
+          {isLogin ? "DON'T HAVE AN IDENTITY? REGISTER" : "ALREADY A USER? LOGIN"}
         </button>
       </div>
     </div>
