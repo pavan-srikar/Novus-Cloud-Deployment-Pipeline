@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ghcr.io/pavan-srikar/novus-backend:latest
+        image: ghcr.io/pavan-srikar/novus-backend:abdcb3d36ec7c1f6a7626d3e5c354a3cdaf3ddcb
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
