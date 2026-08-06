@@ -93,7 +93,7 @@ jobs:
           sed -i "s|ghcr.io/${{ github.repository_owner }}/novus-frontend:.*|ghcr.io/${{ github.repository_owner }}/novus-frontend:${{ github.sha }}|g" infrastructure/kubernetes/frontend/deployment.yaml
 
       # ---------------- Commit Updated Manifests ----------------
-      - name: Commit updated Kubernetes manifests
+      - name: Commit updated Kubernetes manifests to deployment branch
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -105,7 +105,9 @@ jobs:
 
           git commit -m "ci: update image tags [skip ci]"
 
-          git push origin HEAD:main
+          # deployment branch is bot-owned only — force push is expected here,
+          # it always reflects "main + latest image tags", never manual edits
+          git push origin HEAD:deployment --force
 
   deploy:
     needs: build-and-verify
@@ -138,4 +140,3 @@ jobs:
             git reset --hard origin/main
             chmod +x infrastructure/kubernetes/config/update-k8s-secret.sh
             bash infrastructure/kubernetes/config/update-k8s-secret.sh
-            sudo k3s kubectl apply -k infrastructure/kubernetes
