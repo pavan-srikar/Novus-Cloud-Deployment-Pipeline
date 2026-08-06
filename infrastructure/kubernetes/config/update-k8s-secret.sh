@@ -24,10 +24,13 @@ $KUBECTL create secret generic novus-secret \
 
 echo "Restarting frontend backend..."
 
-$KUBECTL rollout restart deployment/backend -n novus
-$KUBECTL rollout restart deployment/frontend -n novus
-
-$KUBECTL rollout status deployment/backend -n novus
-$KUBECTL rollout status deployment/frontend -n novus
+for dep in backend frontend; do
+  if $KUBECTL get deployment "$dep" -n novus &>/dev/null; then
+    $KUBECTL rollout restart deployment/"$dep" -n novus
+    $KUBECTL rollout status deployment/"$dep" -n novus
+  else
+    echo "⚠️  deployment/$dep not found yet (probably not synced by ArgoCD yet) — skipping restart"
+  fi
+done
 
 echo "✅ Kubernetes Secret updated successfully."
