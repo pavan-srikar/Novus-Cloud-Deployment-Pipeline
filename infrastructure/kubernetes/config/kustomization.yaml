@@ -3,4 +3,3 @@ kind: Kustomization
 
 resources:
   - configmap.yaml
-  - secret.yaml
