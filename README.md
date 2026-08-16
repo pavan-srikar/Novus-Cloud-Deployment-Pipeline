@@ -2,8 +2,9 @@
 
 A full-stack AI productivity app (task tracking + an AI chat coach). The app itself is secondary — this is primarily a DevOps project: everything from provisioning the server to deploying new code is automated, with no manual `kubectl apply` or SSH-and-fix steps in the normal flow.
 
-**Stack:** React + TypeScript (Vite) · Express + TypeScript · PostgreSQL + Prisma · JWT auth
-**Infra:** Terraform → AWS EC2 → k3s (single-node Kubernetes) → ArgoCD (GitOps) → NGINX Ingress
+**Stack:** React + TypeScript (Vite) · Express + TypeScript · PostgreSQL + Prisma · JWT auth 
+
+**Infra:** Terraform (AWS EC2 + S3 remote state) → k3s (single-node Kubernetes) → ArgoCD (GitOps) → NGINX Ingress
 
 ---
 
@@ -62,6 +63,20 @@ docker compose -f docker-compose.dev.yml up --build
 
 Production images run the same way via `docker-compose.prod.yml`, pulling from GHCR instead of building locally.
 
+
+---
+
+## Documentation
+
+| Doc | Covers |
+|---|---|
+| [`docs/APP_ARCHITECTURE.md`](./docs/APP_ARCHITECTURE.md) | How the app itself works — data model, auth, the chat-to-task pipeline, XP/leveling |
+| [`docs/SETUP.md`](./docs/SETUP.md) | Full walkthrough from a fresh fork — AWS IAM, Terraform, GitHub secrets, ArgoCD install |
+| [`docs/CICD.md`](./docs/CICD.md) | Both GitHub Actions pipelines, job-by-job, and why they're built the way they are |
+| [`docs/NETWORKING.md`](./docs/NETWORKING.md) | Ingress routing, NetworkPolicies, and two real bugs this design caused |
+| [`docs/SECRETS.md`](./docs/SECRETS.md) | How secrets flow from GitHub → cluster, and an incident where two systems fought over the same one |
+| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md) | A running log of real issues hit, root cause, and fix |
+| [`docs/KUBECTL_CHEATSHEET.md`](./docs/KUBECTL_CHEATSHEET.md) | Every `kubectl`/`argocd` command actually used on this project, explained |
 
 ---
 
@@ -161,6 +176,23 @@ Nothing sensitive lives in git. The flow:
 Rotating any credential is a one-line GitHub Secrets update + a push — no manual `kubectl edit secret` on the box, ever.
 
 ---
+
+## Screenshots
+
+### Web App Demo
+
+![Demo](./docs/assets/webapp.gif)
+
+### Github-Actions
+
+![Github-Actions](./docs/assets/GithubCI.gif)
+
+### Agro CD
+
+![AgroCD](./docs/assets/agrocd.gif)
+
+---
+
 ## Status
 
 **Done:** Docker (dev + prod, multi-stage builds), GitHub Actions CI, GHCR, Terraform + S3 remote state, self-bootstrapping EC2, k3s, ArgoCD GitOps with a dedicated deployment branch, NGINX Ingress, default-deny NetworkPolicies, automated secret rotation.
