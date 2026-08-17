@@ -9,3 +9,4 @@ resources:
   - frontend
   - networkpolicy
   - ingress
+  - monitoring

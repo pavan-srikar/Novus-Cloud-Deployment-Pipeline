@@ -16,11 +16,15 @@ spec:
     metadata:
       labels:
         app: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
 
     spec:
       containers:
       - name: backend
-        image: ghcr.io/pavan-srikar/novus-backend:21bdde60b567a162ce029182837e92b6a17e16af
+        image: ghcr.io/pavan-srikar/novus-backend:2eb587ba370a162d196c3fcf5d729b6ad7b3ff8d
         imagePullPolicy: Always
         ports:
         - containerPort: 5000

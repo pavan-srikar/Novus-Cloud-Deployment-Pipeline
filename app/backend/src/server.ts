@@ -5,6 +5,7 @@ import cors from 'cors'
 import authRoutes from './middleware/auth.js'
 import chatRoutes from './routes/chat.js'
 import taskRoutes from './routes/tasks.js'
+import { registry, metricsMiddleware } from './metrics.js'
 
 const app = express()
 
@@ -14,6 +15,8 @@ app.use(cors({
 }))
 
 app.use(express.json())
+
+app.use(metricsMiddleware)
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${req.method} ${req.url}`)
@@ -26,6 +29,11 @@ app.use('/api/tasks', taskRoutes)
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).send("OK")
+})
+
+app.get("/metrics", async (_req: Request, res: Response) => {
+  res.set('Content-Type', registry.contentType)
+  res.end(await registry.metrics())
 })
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

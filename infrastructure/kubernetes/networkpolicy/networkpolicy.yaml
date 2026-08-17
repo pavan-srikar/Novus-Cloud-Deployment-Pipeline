@@ -52,6 +52,20 @@ spec:
       ports:
         - protocol: TCP
           port: 5000
+    - from:
+        # Prometheus lives in the monitoring namespace and needs to reach
+        # this pod's /metrics endpoint directly (not through the frontend
+        # proxy) — without this, scraping fails exactly like the ingress
+        # bug did: silently dropped, no log line, nothing to debug against.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 5000
   egress:
     - to:
         - podSelector:
