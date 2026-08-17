@@ -5,8 +5,9 @@ Lives in its own `monitoring` namespace, deployed via the same ArgoCD `Applicati
 ## What's collecting what
 
 - **node-exporter** (DaemonSet, `hostNetwork: true`) — host-level metrics: CPU, memory, disk, network, straight from the EC2 instance itself
+- **kube-state-metrics** (Deployment, `monitoring` namespace) — Kubernetes object-level metrics: pod phase (`Running`/`Pending`/`CrashLoopBackOff`), container restart counts, deployment/replicaset replica health. This is the layer that was missing before — node-exporter only sees the host, prom-client only sees the backend process, neither one knows whether a pod itself is healthy
 - **Backend app metrics** — instrumented directly in Express via `prom-client` (`app/backend/src/metrics.ts`), exposed at `/metrics`. Tracks default Node.js process metrics (event loop lag, heap, GC) plus a custom `http_request_duration_seconds` histogram and `http_requests_total` counter, both labeled by method/route/status code
-- **Prometheus** — scrapes both of the above, plus itself
+- **Prometheus** — scrapes all three of the above, plus itself
 
 ## How scraping actually works
 
@@ -42,6 +43,8 @@ Prometheus lives in `monitoring`, the backend lives in `novus`, and the backend'
 
 `kubernetes.io/metadata.name` is a label Kubernetes sets automatically on every namespace (since 1.21+) matching its own name — reliable way to target a whole namespace by name without needing a custom label first.
 
+**Does kube-state-metrics need the same fix?** No — checked, and it doesn't apply. All three `NetworkPolicy` objects in this repo (`frontend-policy`, `backend-policy`, `postgres-policy`) live in the `novus` namespace and only select pods there. There is no `NetworkPolicy` selecting anything in `monitoring`, which means Kubernetes treats that namespace as fully open (no policy = no restriction, not the other way around). Prometheus can reach kube-state-metrics with zero extra config. Worth knowing the flip side too: since nothing in `monitoring` is locked down, Prometheus/Grafana/kube-state-metrics are all reachable by anything else on the cluster network, not just each other — a `default-deny` policy for that namespace would be the natural hardening step later, not needed for now.
+
 ## Accessing it
 
 Deliberately **not** exposed through the public Ingress — same reasoning as ArgoCD's own dashboard: an admin/metrics UI on the open internet is unnecessary attack surface for a solo project. Reach it the same way as ArgoCD, via port-forward:
@@ -53,10 +56,17 @@ kubectl port-forward svc/prometheus 9090:9090 -n monitoring
 
 Grafana: `http://localhost:3000` — default login `admin` / `CHANGE_ME` (set in `grafana-deployment.yaml`). **Change this on first login** — same "don't leave the placeholder in place" rule as `JWT_SECRET: CHANGE_ME` elsewhere in this repo.
 
-The Prometheus datasource is pre-provisioned (`grafana-datasource-configmap.yaml`) — no manual "add data source" step, it's there the moment you log in. Dashboards aren't pre-built yet; add them from Grafana's dashboard gallery (import ID `1860` for a solid generic node-exporter dashboard as a starting point) or build your own against the `http_request_duration_seconds` / `http_requests_total` series for app-level views.
+The Prometheus datasource is pre-provisioned (`grafana-datasource-configmap.yaml`) — no manual "add data source" step, it's there the moment you log in. A dashboard is checked into this repo at `infrastructure/kubernetes/monitoring/novus-devops-dashboard.json` — import it via Grafana's Dashboards → New → Import screen and point it at the existing Prometheus datasource. It covers:
+
+- Cluster overview (scrape targets up/down, avg node CPU/mem)
+- Node health (CPU, memory, disk, network per node, from node-exporter)
+- Pod/scrape-target health (table + timeline of every `up{}` target)
+- Backend app health (request rate, 5xx rate, p50/p95/p99 latency, Node.js heap + event loop lag)
+- Pod-level health (pod phase, restart counts, deployment replica health, per-pod CPU/mem) — from kube-state-metrics, collapsed by default
+
+For anything not covered, Grafana's own dashboard gallery has more generic options (import ID `1860` is a solid generic node-exporter dashboard).
 
 ## What's not included (yet)
 
-- **kube-state-metrics** — would add Kubernetes object-level metrics (pod restart counts, deployment replica health, etc.) on top of the host + app metrics already collected. Reasonable next addition.
 - **Alertmanager** — metrics are collected and visible, but nothing pages/notifies on thresholds yet.
 - **Loki** — still on the roadmap for centralized log aggregation, same as noted in the main README.

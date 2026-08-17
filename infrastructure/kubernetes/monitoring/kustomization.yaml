@@ -5,4 +5,5 @@ resources:
   - namespace.yaml
   - prometheus.yaml
   - node-exporter-daemonset.yaml
+  - kube-state-metrics.yaml
   - grafana.yaml
