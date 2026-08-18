@@ -18,7 +18,9 @@ resource "aws_instance" "novus" {
     volume_type = "gp3"
   }
 
-  user_data = file("${path.module}/user-data.sh")
+  user_data = templatefile("${path.module}/user-data.sh", {
+    git_repo_url = var.git_repo_url
+  })
 
   tags = {
     Name = var.project_name

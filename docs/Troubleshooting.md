@@ -62,9 +62,9 @@ Real issues hit running this project, how they were diagnosed, and the fix. Kept
 
 ### Symptom: fresh EC2 box, CI's SSH deploy step fails with `No such file or directory` / `not a git repository`
 
-**Cause:** `terraform apply` provisions a blank instance — nothing clones the repo onto it automatically. The SSH job assumes the repo already exists at a fixed path.
+**Cause:** `terraform apply` provisioned a blank instance — nothing cloned the repo onto it automatically. The SSH job assumed the repo already existed at a fixed path.
 
-**Fix:** one-time manual `git clone` onto any new box, documented in [`SETUP.md`](./SETUP.md).
+**Fix (now automated):** `user-data.sh` clones the repo itself during boot as part of provisioning — this whole failure mode shouldn't happen anymore. Left here as a record of why the clone step exists in the boot script at all, in case it ever regresses.
 
 ---
 

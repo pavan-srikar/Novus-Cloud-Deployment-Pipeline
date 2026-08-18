@@ -1,0 +1,19 @@
+# Exposes the ArgoCD web UI externally via NodePort, without touching the
+# upstream argocd-server Service (that one's owned by the server-side-applied
+# install manifest — editing it directly risks a field-ownership conflict
+# the next time the install.yaml gets re-applied). This is a separate,
+# repo-owned Service pointing at the same pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-external
+  namespace: argocd
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: argocd-server
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
+      nodePort: 30443

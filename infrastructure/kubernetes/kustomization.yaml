@@ -10,3 +10,4 @@ resources:
   - networkpolicy
   - ingress
   - monitoring
+  - argocd-access.yaml

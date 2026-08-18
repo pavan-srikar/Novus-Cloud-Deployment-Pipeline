@@ -42,6 +42,32 @@ resource "aws_security_group" "novus" {
     ]
   }
 
+  ingress {
+
+    description = "ArgoCD Web UI"
+
+    from_port = 30443
+    to_port   = 30443
+    protocol  = "tcp"
+
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+  }
+
+  ingress {
+
+    description = "Grafana Web UI"
+
+    from_port = 30300
+    to_port   = 30300
+    protocol  = "tcp"
+
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+  }
+
   egress {
 
     from_port = 0

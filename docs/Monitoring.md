@@ -5,7 +5,7 @@ Lives in its own `monitoring` namespace, deployed via the same ArgoCD `Applicati
 ## What's collecting what
 
 - **node-exporter** (DaemonSet, `hostNetwork: true`) — host-level metrics: CPU, memory, disk, network, straight from the EC2 instance itself
-- **kube-state-metrics** (Deployment, `monitoring` namespace) — Kubernetes object-level metrics: pod phase (`Running`/`Pending`/`CrashLoopBackOff`), container restart counts, deployment/replicaset replica health. This is the layer that was missing before — node-exporter only sees the host, prom-client only sees the backend process, neither one knows whether a pod itself is healthy
+- **kube-state-metrics** (Deployment, `monitoring` namespace) — Kubernetes object-level metrics: pod phase (`Running`/`Pending`/`CrashLoopBackOff`), container restart counts, deployment/replicaset replica health. This is the layer node-exporter and app metrics don't cover — node-exporter only sees the host, `prom-client` only sees the backend process, neither one knows whether a pod itself is healthy at the Kubernetes level
 - **Backend app metrics** — instrumented directly in Express via `prom-client` (`app/backend/src/metrics.ts`), exposed at `/metrics`. Tracks default Node.js process metrics (event loop lag, heap, GC) plus a custom `http_request_duration_seconds` histogram and `http_requests_total` counter, both labeled by method/route/status code
 - **Prometheus** — scrapes all three of the above, plus itself
 
@@ -20,9 +20,9 @@ annotations:
   prometheus.io/path: "/metrics"
 ```
 
-The backend Deployment carries these annotations already. **Any future service** just needs the same three annotations on its pod template to get picked up automatically — no editing Prometheus's config, no redeploying Prometheus itself.
+The backend Deployment carries these annotations already, and so does kube-state-metrics (on port `8080`). **Any future service** just needs the same three annotations on its pod template to get picked up automatically — no editing Prometheus's config, no redeploying Prometheus itself.
 
-This requires Prometheus to have RBAC permission to list pods/services/nodes across the cluster (`prometheus-rbac.yaml` — a `ClusterRole`, since discovery isn't scoped to one namespace).
+This requires Prometheus to have RBAC permission to list pods/services/nodes across the cluster (`prometheus.yaml` — a `ClusterRole`, since discovery isn't scoped to one namespace). kube-state-metrics has its own separate `ClusterRole` for the same reason — it needs to list Deployments/ReplicaSets/StatefulSets/Jobs across every namespace to report on them.
 
 ## The NetworkPolicy gotcha this setup ran straight into
 
@@ -43,20 +43,23 @@ Prometheus lives in `monitoring`, the backend lives in `novus`, and the backend'
 
 `kubernetes.io/metadata.name` is a label Kubernetes sets automatically on every namespace (since 1.21+) matching its own name — reliable way to target a whole namespace by name without needing a custom label first.
 
-**Does kube-state-metrics need the same fix?** No — checked, and it doesn't apply. All three `NetworkPolicy` objects in this repo (`frontend-policy`, `backend-policy`, `postgres-policy`) live in the `novus` namespace and only select pods there. There is no `NetworkPolicy` selecting anything in `monitoring`, which means Kubernetes treats that namespace as fully open (no policy = no restriction, not the other way around). Prometheus can reach kube-state-metrics with zero extra config. Worth knowing the flip side too: since nothing in `monitoring` is locked down, Prometheus/Grafana/kube-state-metrics are all reachable by anything else on the cluster network, not just each other — a `default-deny` policy for that namespace would be the natural hardening step later, not needed for now.
+**Does kube-state-metrics need the same fix?** No. All three `NetworkPolicy` objects in this repo (`frontend-policy`, `backend-policy`, `postgres-policy`) live in the `novus` namespace and only select pods there. There is no `NetworkPolicy` selecting anything in `monitoring`, which means Kubernetes treats that namespace as fully open by default — no policy means no restriction, not the other way around. Prometheus can reach kube-state-metrics with zero extra config.
+
+Worth knowing the flip side: since nothing in `monitoring` is locked down, Prometheus/Grafana/kube-state-metrics are all reachable by anything else on the cluster network, not just each other. A `default-deny` policy for that namespace would be the natural hardening step later — not needed for a solo project right now.
 
 ## Accessing it
 
-Deliberately **not** exposed through the public Ingress — same reasoning as ArgoCD's own dashboard: an admin/metrics UI on the open internet is unnecessary attack surface for a solo project. Reach it the same way as ArgoCD, via port-forward:
+- **Grafana:** exposed directly at `http://<EC2_HOST>:30300` via NodePort — no port-forward needed day to day. Default login `admin` / `CHANGE_ME` (set in `grafana.yaml`). **Change this on first login**, same "don't leave the placeholder in place" rule as `JWT_SECRET: CHANGE_ME` elsewhere in this repo.
+- **Prometheus:** still port-forward only —
+  ```bash
+  kubectl port-forward svc/prometheus 9090:9090 -n monitoring
+  ```
+  Unlike Grafana and ArgoCD, Prometheus has **no built-in authentication at all**. Exposing it directly means anyone with the URL can read every metric being collected — not catastrophic, but a real information-disclosure tradeoff, made deliberately here rather than by default.
+- **kube-state-metrics:** never needs direct access — it's a metrics source Prometheus scrapes, not something you open in a browser.
 
-```bash
-kubectl port-forward svc/grafana 3000:3000 -n monitoring
-kubectl port-forward svc/prometheus 9090:9090 -n monitoring
-```
+The Prometheus datasource in Grafana is pre-provisioned (`grafana.yaml`'s `grafana-datasources` ConfigMap) — no manual "add data source" step, it's there the moment you log in.
 
-Grafana: `http://localhost:3000` — default login `admin` / `CHANGE_ME` (set in `grafana-deployment.yaml`). **Change this on first login** — same "don't leave the placeholder in place" rule as `JWT_SECRET: CHANGE_ME` elsewhere in this repo.
-
-The Prometheus datasource is pre-provisioned (`grafana-datasource-configmap.yaml`) — no manual "add data source" step, it's there the moment you log in. A dashboard is checked into this repo at `infrastructure/kubernetes/monitoring/novus-devops-dashboard.json` — import it via Grafana's Dashboards → New → Import screen and point it at the existing Prometheus datasource. It covers:
+A dashboard is checked into this repo at `infrastructure/kubernetes/monitoring/novus-devops-dashboard.json` — import it via Grafana's **Dashboards → New → Import** screen and point it at the existing Prometheus datasource. It covers:
 
 - Cluster overview (scrape targets up/down, avg node CPU/mem)
 - Node health (CPU, memory, disk, network per node, from node-exporter)
