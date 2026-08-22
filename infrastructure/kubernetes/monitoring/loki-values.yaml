@@ -7,11 +7,32 @@ loki:
   limits_config:
     retention_period: 168h   # 7 days — bump this up if your disk has room
 
+  # Required by newer chart versions — defines how Loki indexes/stores logs.
+  # tsdb + filesystem is the standard single-node combo (no S3/GCS involved).
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+deploymentMode: SingleBinary
+
 singleBinary:
   replicas: 1
   persistence:
     enabled: true
     size: 10Gi
+
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
 
 gateway:
   enabled: false   # skip this on a single node, just hit loki directly
