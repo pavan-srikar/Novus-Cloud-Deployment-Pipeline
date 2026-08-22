@@ -24,7 +24,7 @@ spec:
       containers:
 
       - name: frontend
-        image: ghcr.io/pavan-srikar/novus-frontend:21bdde60b567a162ce029182837e92b6a17e16af
+        image: ghcr.io/pavan-srikar/novus-frontend:d167d526f6432155654076f20df5fd810c2fed31
         imagePullPolicy: Always
 
         ports:
