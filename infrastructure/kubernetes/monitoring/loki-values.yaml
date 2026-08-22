@@ -1,0 +1,20 @@
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  limits_config:
+    retention_period: 168h   # 7 days — bump this up if your disk has room
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+
+gateway:
+  enabled: false   # skip this on a single node, just hit loki directly
+
+test:
+  enabled: false

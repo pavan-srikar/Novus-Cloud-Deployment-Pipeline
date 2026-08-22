@@ -41,6 +41,34 @@ sudo -u ubuntu -H git clone "${git_repo_url}" "$REPO_DIR"
 # --- app namespace ---
 $K create namespace novus
 
+# --- monitoring namespace (Loki/Promtail, and Prometheus/Grafana if not already there) ---
+$K create namespace monitoring
+
+# --- Helm ---
+# Not installed by default — needed for Loki/Promtail (and Prometheus/Grafana
+# if you ever move that into this script too instead of installing by hand).
+curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 /tmp/get_helm.sh
+/tmp/get_helm.sh
+rm /tmp/get_helm.sh
+
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# --- Prometheus + Grafana (raw manifests, not a Helm chart) ---
+$K apply -f "$REPO_DIR/infrastructure/kubernetes/monitoring/prometheus.yaml"
+$K apply -f "$REPO_DIR/infrastructure/kubernetes/monitoring/grafana.yaml"
+
+# --- Loki + Promtail (centralized logging) ---
+# Values files live in the repo we just cloned, so they're already here.
+helm install loki grafana/loki \
+  -n monitoring \
+  -f "$REPO_DIR/infrastructure/kubernetes/monitoring/loki-values.yaml"
+
+helm install promtail grafana/promtail \
+  -n monitoring \
+  -f "$REPO_DIR/infrastructure/kubernetes/monitoring/promtail-values.yaml"
+
 # --- ArgoCD ---
 $K create namespace argocd
 

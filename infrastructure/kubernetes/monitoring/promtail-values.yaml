@@ -1,0 +1,7 @@
+config:
+  clients:
+    - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+  snippets:
+    pipelineStages:
+      - cri: {}   # k3s uses containerd/CRI log format

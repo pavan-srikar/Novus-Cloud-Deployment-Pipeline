@@ -2,7 +2,7 @@
 
 Steps to get this running from a fresh fork. Do them in order — later steps depend on earlier ones existing.
 
-`terraform apply` now does most of the heavy lifting itself — it provisions the EC2 box **and** installs Docker, k3s, ArgoCD, clones this repo onto the box, and points ArgoCD's `Application` at your `deployment` branch, all via the `user_data` boot script. What's left manual below is only the stuff that genuinely can't be automated (see the note at the end of step 4 for why).
+`terraform apply` now does most of the heavy lifting itself — it provisions the EC2 box **and** installs Docker, k3s, ArgoCD, the full monitoring stack (Prometheus, Grafana, Loki, Promtail), clones this repo onto the box, and points ArgoCD's `Application` at your `deployment` branch, all via the `user_data` boot script. What's left manual below is only the stuff that genuinely can't be automated (see the note at the end of step 4 for why).
 
 ## 1. Prerequisites
 
@@ -62,12 +62,12 @@ terraform output public_ip
 
 Set `EC2_HOST` in GitHub Secrets to that IP.
 
-By the time `apply` finishes, the box has already: installed Docker + k3s, cloned your repo, created the `novus` and `argocd` namespaces, installed ArgoCD, and applied an `Application` object pointing at your `deployment` branch. **It'll sit there doing nothing yet** — the `deployment` branch doesn't exist until step 5, and ArgoCD just waits/retries quietly until it does. That's expected, not an error.
+By the time `apply` finishes, the box has already: installed Docker + k3s, cloned your repo, created the `novus`, `argocd`, and `monitoring` namespaces, installed ArgoCD, applied the Prometheus and Grafana manifests, installed Loki and Promtail via Helm, and applied an `Application` object pointing at your `deployment` branch. **The app itself will sit there doing nothing yet** — the `deployment` branch doesn't exist until step 5, and ArgoCD just waits/retries quietly until it does. That's expected, not an error. Monitoring, on the other hand, is already up and running at this point — you can log into Grafana (step 7) before you've even pushed a `deployment` branch.
 
 **What's still manual, and why:**
 - **Setting `EC2_HOST`** — chicken-and-egg. The IP doesn't exist until the instance does, so nothing can pre-fill this before `apply` runs.
 - **Pushing the `deployment` branch** (step 5) — this has to come from *your* machine with *your* git identity/credentials. The EC2 box deliberately doesn't hold write access to your repo — giving a public-facing server push rights to your source control would be a real security downgrade for very little benefit.
-- **Rotating the ArgoCD admin password** (step 6) — a human decision, not something worth silently automating.
+- **Rotating the ArgoCD admin password** (step 6) and **Grafana's password** (step 7) — human decisions, not something worth silently automating.
 
 ## 5. Push the `deployment` branch once
 
@@ -98,20 +98,30 @@ argocd login localhost:8080 --username admin --password '<password from the file
 argocd account update-password
 ```
 
-## 7. Trigger the first real deploy
+## 7. Log into Grafana and change the password
+
+Grafana's exposed at `http://<EC2_HOST>:30300` — plain HTTP, no self-signed cert warning to click through like ArgoCD.
+
+Default login is `admin` / `CHANGE_ME` (set via `GF_SECURITY_ADMIN_PASSWORD` in `infrastructure/kubernetes/monitoring/grafana.yaml`) — log in with that, then change it immediately: top-left profile icon → **Change password**.
+
+One gotcha worth knowing: that `GF_SECURITY_ADMIN_PASSWORD` env var only sets the password the **first time** Grafana initializes its database. If you ever edit that value in the manifest later expecting to reset the password, it won't do anything on a normal redeploy — the admin account already exists by then. Password changes after first login only happen through Grafana's own UI/API, not by editing YAML.
+
+Both the **Prometheus** and **Loki** datasources are already wired up (no "add data source" step) — Loki logs are viewable under **Explore** in the left sidebar, pick the Loki datasource, and query by namespace (e.g. `{namespace="novus"}`) instead of SSHing in for `kubectl logs`. `infrastructure/kubernetes/monitoring/novus-devops-dashboard.json` is a ready-made metrics dashboard — import it via **Dashboards → New → Import**. See `docs/MONITORING.md` for what it covers.
+
+## 8. Trigger the first real deploy
 
 Push any small change to `main` (app code, not `infrastructure/kubernetes/**`). This kicks off CI, which builds and pushes Docker images, bumps image tags and force-pushes to `deployment`, then SSHes in to sync your secrets into the cluster.
 
-ArgoCD picks up the `deployment` branch change and applies everything else — Postgres, backend, frontend, ingress, network policies, monitoring.
+ArgoCD picks up the `deployment` branch change and applies everything else — Postgres, backend, frontend, ingress, network policies.
 
-## 8. Check it worked
+## 9. Check it worked
 
 ```bash
 kubectl get pods -n novus
 kubectl get pods -n monitoring
 ```
 
-Everything should show `Running`, `1/1`. Then open `http://<EC2_HOST>` in a browser.
+`-n novus` should show your app pods `Running`, `1/1`. `-n monitoring` should show Prometheus, Grafana, Loki, and a Promtail pod per node, all `Running`. Then open `http://<EC2_HOST>` in a browser for the app, and `http://<EC2_HOST>:30300` for Grafana.
 
 ## Day-to-day after this
 
@@ -119,6 +129,6 @@ Just `git push` to `main` like normal. CI builds, ArgoCD deploys, no manual step
 
 ## If you ever `terraform destroy`
 
-Redo steps 4 and 6 (Terraform recreates everything and re-bootstraps ArgoCD automatically; you just need to update `EC2_HOST` and rotate the new admin password). Steps 3 and 5 don't need repeating — your GitHub secrets and `deployment` branch survive a cluster teardown, since neither one lives on the EC2 box.
+Redo steps 4, 6, and 7 (Terraform recreates everything and re-bootstraps ArgoCD **and the full monitoring stack** automatically; you just need to update `EC2_HOST` and rotate both the new ArgoCD admin password and Grafana's, since fresh PVCs mean both reset to their defaults on a rebuild). Steps 3 and 5 don't need repeating — your GitHub secrets and `deployment` branch survive a cluster teardown, since neither one lives on the EC2 box.
 
-**One thing that does *not* survive:** the database. See `docs/TROUBLESHOOTING.md` for why (Postgres storage is tied to the instance's local disk) and what a durable fix would look like.
+**Things that do *not* survive a destroy:** the database, and your Loki log history. Both are tied to the instance's local disk via PVCs, so a fresh box means fresh (empty) storage for each. See `docs/TROUBLESHOOTING.md` for why and what a durable fix would look like for Postgres — the same underlying issue applies to Loki's log retention, so treat any logs you care about long-term as something to export elsewhere, not something this setup keeps for you.
